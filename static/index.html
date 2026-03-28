@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FotosAI - O Seu Google Fotos Pessoal</title>
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Local CSS -->
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="background-effect"></div>
+    
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="header glass-panel">
+            <div class="logo">
+                <i class="fa-solid fa-brain logo-icon"></i>
+                <span class="logo-text">Fotos<span class="highlight">AI</span></span>
+            </div>
+            
+            <div class="search-bar">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="searchInput" placeholder="Descreva a imagem (ex: 'Um gato deitado no sofá', 'Carro desportivo vermelho')..." autocomplete="off">
+            </div>
+            
+            <div class="actions">
+                <button id="btnSettings" class="icon-btn" title="Configurar Indexação"><i class="fa-solid fa-hard-drive"></i></button>
+            </div>
+        </header>
+
+        <!-- MAIN GALLERY -->
+        <main class="gallery-container">
+            <div id="loadingSpinner" class="hidden">
+                <div class="spinner"></div>
+                <div class="spinner-text">A procurar memórias em formato vetorial...</div>
+            </div>
+            
+            <div id="gallery" class="photo-grid">
+                <!-- Welcome State -->
+                <div class="welcome-hero">
+                    <i class="fa-regular fa-images hero-icon"></i>
+                    <h2>Descubra as suas memórias através de IA</h2>
+                    <p>Pesquise por conceitos, objetos ou emoções. FotosAI compreende linguagem natural.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- SETTINGS MODAL (Glassmorphism) -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-content glass-panel-strong">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-microchip"></i> Engine de Indexação</h2>
+                <button id="closeModal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p class="mt-0">Introduza a pasta principal onde estão as suas fotografias. A Inteligência Artificial vai varrer a pasta recursivamente (incluindo subpastas), extrair embeddings do CLIP e guardar as distâncias semânticas.</p>
+                
+                <div class="input-group">
+                    <input type="text" id="folderPathInput" placeholder="ex: C:\Users\Fotos...">
+                    <button class="primary-btn" id="btnStartIndex">Iniciar Indexação</button>
+                    <button class="danger-btn hidden" id="btnStopIndex">Parar</button>
+                </div>
+                
+                <div class="status-dashboard card">
+                    <div class="status-row">
+                        <span>Estado:</span>
+                        <span id="statusIndicator" class="badge">Inativo</span>
+                    </div>
+                    <div class="status-row">
+                        <span>Pasta Atual:</span>
+                        <span id="currentFolderText" class="value-text">-</span>
+                    </div>
+                    <div class="status-row">
+                        <span>Ficheiros Encontrados:</span>
+                        <span id="filesFoundCount" class="value-text">0</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="stat-labels">
+                            <span>Processados: <strong id="filesProcessedCount">0</strong></span>
+                            <span>Erros: <strong id="filesErrorCount" class="text-error">0</strong></span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" id="indexProgressFill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4" style="margin-top: 1.5rem;">
+                    <h3><i class="fa-solid fa-list"></i> Pastas Adicionadas:</h3>
+                    <ul id="indexedFoldersList" style="list-style: none; padding: 0; max-height: 150px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; margin-top: 0.5rem; border: 1px solid rgba(255,255,255,0.1);">
+                        <!-- preenchido via JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LIGHTBOX -->
+    <div id="lightbox" class="lightbox hidden">
+        <button id="closeLightbox" class="icon-btn lightbox-close"><i class="fa-solid fa-xmark"></i></button>
+        <img id="lightboxImg" src="" alt="Imagem Expandida">
+        <div id="lightboxMeta" class="lightbox-meta glass-panel"></div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

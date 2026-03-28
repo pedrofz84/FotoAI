@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+sentence-transformers
+chromadb
+Pillow
+SQLAlchemy
+pydantic
+python-multipart

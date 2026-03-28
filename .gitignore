@@ -1,0 +1,19 @@
+# Ambientes Virtuais
+venv/
+env/
+.env
+
+# Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Bases de Dados e Dados Locais (MUITO IMPORTANTE NÃO PARTILHAR ESTES)
+fotosai.db
+chroma_data/
+
+# Ficheiros do Sistema e IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
