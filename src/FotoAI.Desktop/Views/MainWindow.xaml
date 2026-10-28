@@ -17,6 +17,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Menu Bar -->
@@ -131,7 +132,14 @@
         </ListView>
 
         <!-- Footer StatusBar: o motor diz sempre o que está a fazer -->
-        <Grid Grid.Row="5" Margin="0,10,0,0">
+        <!-- Paginação -->
+        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+            <TextBlock Text="{Binding ResultsCountText}" VerticalAlignment="Center" Foreground="#888888" Margin="0,0,12,0"/>
+            <Button Content="Mostrar mais" Command="{Binding LoadMoreCommand}" Padding="16,6" Cursor="Hand"
+                    Visibility="{Binding HasMore, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        </StackPanel>
+
+        <Grid Grid.Row="6" Margin="0,10,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>

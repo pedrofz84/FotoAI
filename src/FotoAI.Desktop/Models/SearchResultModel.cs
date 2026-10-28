@@ -52,5 +52,8 @@ namespace FotoAI.Desktop.Models
     {
         [JsonPropertyName("results")]
         public SearchResultModel[] Results { get; set; } = [];
+
+        [JsonPropertyName("has_more")]
+        public bool HasMore { get; set; }
     }
 }

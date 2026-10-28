@@ -196,7 +196,7 @@ def list_years(db: Session = Depends(get_db)):
     return YearsResponse(years=[YearCount(year=int(y), count=n) for y, n in rows if y],
                          without_date=without)
 
-def _format_search_results(search_result, db: Session, start_time: float) -> SearchResponse:
+def _format_search_results(search_result, db: Session, start_time: float, limit: int = 0) -> SearchResponse:
     """ Helper para converter hits do Qdrant em objetos SearchResponse do SQLite """
     from app.models.domain import PhotoRecord
     results_dto = []
@@ -217,7 +217,8 @@ def _format_search_results(search_result, db: Session, start_time: float) -> Sea
             ))
             
     processing_time = int((time.time() - start_time) * 1000)
-    return SearchResponse(results=results_dto, processing_time_ms=processing_time)
+    has_more = bool(limit) and len(search_result.points) >= limit
+    return SearchResponse(results=results_dto, processing_time_ms=processing_time, has_more=has_more)
 
 @router.post("/search", response_model=SearchResponse)
 def search_photos(request: SearchRequest, db: Session = Depends(get_db)):
@@ -229,14 +230,15 @@ def search_photos(request: SearchRequest, db: Session = Depends(get_db)):
         collection_name=vector_store.COLLECTION_NAME,
         query=query_vector,
         limit=request.top_k,
+        offset=max(0, request.offset),
         score_threshold=request.min_score,
         query_filter=_date_filter(request.year_from, request.year_to)
     )
     
-    return _format_search_results(search_result, db, start_time)
+    return _format_search_results(search_result, db, start_time, request.top_k)
 
 @router.post("/search/image", response_model=SearchResponse)
-async def search_by_image(file: UploadFile = File(...), top_k: int = 50,
+async def search_by_image(file: UploadFile = File(...), top_k: int = 50, offset: int = 0,
                           year_from: int | None = None, year_to: int | None = None,
                           db: Session = Depends(get_db)):
     """ Recebe uma imagem externa, gera o embedding e procura fotos semelhantes na base local """
@@ -255,13 +257,14 @@ async def search_by_image(file: UploadFile = File(...), top_k: int = 50,
         collection_name=vector_store.COLLECTION_NAME,
         query=query_vector,
         limit=top_k,
+        offset=max(0, offset),
         query_filter=_date_filter(year_from, year_to)
     )
     
-    return _format_search_results(search_result, db, start_time)
+    return _format_search_results(search_result, db, start_time, top_k)
 
 @router.get("/search/similar/{photo_id}", response_model=SearchResponse)
-def search_similar(photo_id: int, top_k: int = 50, year_from: int | None = None,
+def search_similar(photo_id: int, top_k: int = 50, offset: int = 0, year_from: int | None = None,
                    year_to: int | None = None, db: Session = Depends(get_db)):
     """ Encontra fotos semelhantes a uma já indexada, reutilizando o vetor guardado no Qdrant """
     start_time = time.time()
@@ -295,7 +298,8 @@ def search_similar(photo_id: int, top_k: int = 50, year_from: int | None = None,
         collection_name=vector_store.COLLECTION_NAME,
         query=query_vector,
         limit=top_k,
+        offset=max(0, offset),
         query_filter=_date_filter(year_from, year_to)
     )
     
-    return _format_search_results(search_result, db, start_time)
+    return _format_search_results(search_result, db, start_time, top_k)

@@ -130,11 +130,11 @@ namespace FotoAI.Desktop.Services
             }
         }
 
-        public async Task<SearchResponseModel?> SearchAsync(string query, int topK = 50, int? yearFrom = null, int? yearTo = null)
+        public async Task<SearchResponseModel?> SearchAsync(string query, int topK = 50, int? yearFrom = null, int? yearTo = null, int offset = 0)
         {
             try
             {
-                var payload = new { query, top_k = topK, year_from = yearFrom, year_to = yearTo };
+                var payload = new { query, top_k = topK, offset, year_from = yearFrom, year_to = yearTo };
                 var response = await _httpClient.PostAsJsonAsync("api/search", payload);
                 if (response.IsSuccessStatusCode)
                 {
@@ -148,7 +148,7 @@ namespace FotoAI.Desktop.Services
             return null;
         }
 
-        public async Task<SearchResponseModel?> SearchByImageAsync(string filePath, int topK = 50, int? yearFrom = null, int? yearTo = null)
+        public async Task<SearchResponseModel?> SearchByImageAsync(string filePath, int topK = 50, int? yearFrom = null, int? yearTo = null, int offset = 0)
         {
             try
             {
@@ -157,7 +157,7 @@ namespace FotoAI.Desktop.Services
                 fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
                 content.Add(fileContent, "file", System.IO.Path.GetFileName(filePath));
 
-                var response = await _httpClient.PostAsync($"api/search/image?top_k={topK}{YearQuery(yearFrom, yearTo)}", content);
+                var response = await _httpClient.PostAsync($"api/search/image?top_k={topK}&offset={offset}{YearQuery(yearFrom, yearTo)}", content);
                 if (response.IsSuccessStatusCode)
                 {
                     return await response.Content.ReadFromJsonAsync<SearchResponseModel>();
@@ -175,11 +175,11 @@ namespace FotoAI.Desktop.Services
             return null;
         }
 
-        public async Task<SearchResponseModel?> SearchSimilarAsync(int photoId, int topK = 50, int? yearFrom = null, int? yearTo = null)
+        public async Task<SearchResponseModel?> SearchSimilarAsync(int photoId, int topK = 50, int? yearFrom = null, int? yearTo = null, int offset = 0)
         {
             try
             {
-                var response = await _httpClient.GetAsync($"api/search/similar/{photoId}?top_k={topK}{YearQuery(yearFrom, yearTo)}");
+                var response = await _httpClient.GetAsync($"api/search/similar/{photoId}?top_k={topK}&offset={offset}{YearQuery(yearFrom, yearTo)}");
                 if (response.IsSuccessStatusCode)
                 {
                     return await response.Content.ReadFromJsonAsync<SearchResponseModel>();

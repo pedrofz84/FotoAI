@@ -30,6 +30,7 @@ class FolderListResponse(BaseModel):
 class SearchRequest(BaseModel):
     query: str
     top_k: int = 50
+    offset: int = 0                   # para "Mostrar mais": saltar os primeiros N resultados
     min_score: float = 0.15
     year_from: Optional[int] = None   # filtros por ano de captura (inclusive)
     year_to: Optional[int] = None
@@ -52,3 +53,4 @@ class YearsResponse(BaseModel):
 
 class SearchResponse(BaseModel):
     results: List[SearchResultItem]
+    has_more: bool = False            # True se pode haver mais resultados além destes

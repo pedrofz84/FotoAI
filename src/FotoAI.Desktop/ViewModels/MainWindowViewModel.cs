@@ -86,6 +86,17 @@ namespace FotoAI.Desktop.ViewModels
                 SearchResults.Add(r);
         }
 
+        // Paginação: a última pesquisa, guardada como "dá-me a página a partir de N"
+        public const int PageSize = 50;
+        private Func<int, Task<SearchResponseModel?>>? _lastQuery;
+
+        [ObservableProperty]
+        [NotifyCanExecuteChangedFor(nameof(LoadMoreCommand))]
+        private bool _hasMore;
+
+        [ObservableProperty]
+        private string _resultsCountText = "";
+
         // Para repetir a última pesquisa quando o filtro muda
         private Func<Task>? _lastSearch;
         private bool _wasBusy;
@@ -105,15 +116,46 @@ namespace FotoAI.Desktop.ViewModels
                 await _lastSearch();
         }
 
-        private async Task RunSearchAsync(Func<Task<SearchResponseModel?>> search)
+        /// <summary>Pesquisa nova: começa na primeira página.</summary>
+        private async Task RunSearchAsync(Func<int, Task<SearchResponseModel?>> query)
         {
+            _lastQuery = query;
             IsBusy = true;
             SearchResults.Clear();
-            var response = await search();
+            var response = await query(0);
             _lastResults = response?.Results?.ToList() ?? new List<SearchResultModel>();
+            HasMore = response?.HasMore ?? false;
             ApplySort();
+            UpdateResultsCount();
             IsBusy = false;
         }
+
+        private bool CanLoadMore() => HasMore && !IsBusy && _lastQuery != null;
+
+        [RelayCommand(CanExecute = nameof(CanLoadMore))]
+        private async Task LoadMoreAsync()
+        {
+            if (_lastQuery == null) return;
+            IsBusy = true;
+            var response = await _lastQuery(_lastResults.Count);
+            var known = new HashSet<int>(_lastResults.Select(r => r.Id));
+            var fresh = response?.Results?.Where(r => known.Add(r.Id)).ToList() ?? new List<SearchResultModel>();
+            _lastResults.AddRange(fresh);
+            HasMore = (response?.HasMore ?? false) && fresh.Count > 0;
+            // Por relevância basta acrescentar no fim (a grelha não salta para o topo);
+            // nas outras ordens os novos podem ir para o meio, por isso reordena-se tudo
+            if (SortOrder == SortRelevance)
+                foreach (var r in fresh) SearchResults.Add(r);
+            else
+                ApplySort();
+            UpdateResultsCount();
+            IsBusy = false;
+        }
+
+        private void UpdateResultsCount() =>
+            ResultsCountText = _lastResults.Count == 0 ? "" : $"{_lastResults.Count} resultados";
+
+        partial void OnIsBusyChanged(bool value) => LoadMoreCommand.NotifyCanExecuteChanged();
 
         private async Task LoadYearsAsync()
         {
@@ -219,7 +261,7 @@ namespace FotoAI.Desktop.ViewModels
         {
             if (string.IsNullOrWhiteSpace(SearchQuery)) return;
             var query = SearchQuery;
-            _lastSearch = () => RunSearchAsync(() => _engineClient.SearchAsync(query, yearFrom: FromYear, yearTo: ToYear));
+            _lastSearch = () => RunSearchAsync(off => _engineClient.SearchAsync(query, PageSize, FromYear, ToYear, off));
             await _lastSearch();
         }
 
@@ -321,7 +363,7 @@ namespace FotoAI.Desktop.ViewModels
         {
             if (photoId <= 0) return;
             SearchQuery = "Imagens Semelhantes...";
-            _lastSearch = () => RunSearchAsync(() => _engineClient.SearchSimilarAsync(photoId, yearFrom: FromYear, yearTo: ToYear));
+            _lastSearch = () => RunSearchAsync(off => _engineClient.SearchSimilarAsync(photoId, PageSize, FromYear, ToYear, off));
             await _lastSearch();
         }
 
@@ -338,7 +380,7 @@ namespace FotoAI.Desktop.ViewModels
             {
                 var file = dialog.FileName;
                 SearchQuery = $"Semelhante a: {System.IO.Path.GetFileName(file)}";
-                _lastSearch = () => RunSearchAsync(() => _engineClient.SearchByImageAsync(file, yearFrom: FromYear, yearTo: ToYear));
+                _lastSearch = () => RunSearchAsync(off => _engineClient.SearchByImageAsync(file, PageSize, FromYear, ToYear, off));
                 await _lastSearch();
             }
         }
