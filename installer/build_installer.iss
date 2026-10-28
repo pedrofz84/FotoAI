@@ -1,7 +1,7 @@
 [Setup]
 AppName=FotoAI
 AppVersion=1.0.0
-Publisher=Louko
+Publisher=Pedro Silva
 DefaultDirName={autopf}\FotoAI
 DefaultGroupName=FotoAI
 OutputDir=.\Output
