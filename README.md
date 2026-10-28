@@ -77,3 +77,7 @@ Fecha a app e apaga a pasta `%LOCALAPPDATA%\FotoAI`.
 3. **Setup:** abre `installer/build_installer.iss` no Inno Setup e carrega em Compile.
 
 O instalador ainda não foi testado num PC sem Python.
+
+## Licença
+
+Distribuído sob a licença MIT. Vê o ficheiro [LICENSE](LICENSE).
