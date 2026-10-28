@@ -53,6 +53,39 @@ namespace FotoAI.Desktop.ViewModels
         [ObservableProperty]
         private string _yearFilterHint = "";
 
+        // Ordenação dos resultados (feita aqui, sem voltar a perguntar ao motor)
+        public const string SortRelevance = "Relevância";
+        public const string SortNewest = "Mais recentes";
+        public const string SortOldest = "Mais antigas";
+        public const string SortName = "Nome";
+        public string[] SortOptions { get; } = { SortRelevance, SortNewest, SortOldest, SortName };
+
+        [ObservableProperty]
+        private string _sortOrder = SortRelevance;
+
+        private List<SearchResultModel> _lastResults = new();
+
+        partial void OnSortOrderChanged(string value) => ApplySort();
+
+        private void ApplySort()
+        {
+            IEnumerable<SearchResultModel> sorted = SortOrder switch
+            {
+                // Fotos sem data vão sempre para o fim
+                SortNewest => _lastResults.OrderBy(r => r.CaptureDate == null)
+                                          .ThenByDescending(r => r.CaptureDate)
+                                          .ThenBy(r => r.FileName, StringComparer.CurrentCultureIgnoreCase),
+                SortOldest => _lastResults.OrderBy(r => r.CaptureDate == null)
+                                          .ThenBy(r => r.CaptureDate)
+                                          .ThenBy(r => r.FileName, StringComparer.CurrentCultureIgnoreCase),
+                SortName => _lastResults.OrderBy(r => r.FileName, StringComparer.CurrentCultureIgnoreCase),
+                _ => _lastResults.OrderByDescending(r => r.Score),
+            };
+            SearchResults.Clear();
+            foreach (var r in sorted)
+                SearchResults.Add(r);
+        }
+
         // Para repetir a última pesquisa quando o filtro muda
         private Func<Task>? _lastSearch;
         private bool _wasBusy;
@@ -77,11 +110,8 @@ namespace FotoAI.Desktop.ViewModels
             IsBusy = true;
             SearchResults.Clear();
             var response = await search();
-            if (response?.Results != null)
-            {
-                foreach (var result in response.Results)
-                    SearchResults.Add(result);
-            }
+            _lastResults = response?.Results?.ToList() ?? new List<SearchResultModel>();
+            ApplySort();
             IsBusy = false;
         }
 

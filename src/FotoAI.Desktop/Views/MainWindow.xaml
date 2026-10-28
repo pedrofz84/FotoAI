@@ -85,6 +85,8 @@
             <ComboBox ItemsSource="{Binding Years}" SelectedItem="{Binding YearFrom}" Width="80"/>
             <TextBlock Text="até" VerticalAlignment="Center" Margin="8,0,6,0"/>
             <ComboBox ItemsSource="{Binding Years}" SelectedItem="{Binding YearTo}" Width="80"/>
+            <TextBlock Text="Ordenar:" VerticalAlignment="Center" Margin="24,0,6,0"/>
+            <ComboBox ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SortOrder}" Width="120"/>
             <TextBlock Text="{Binding YearFilterHint}" VerticalAlignment="Center" Margin="12,0,0,0"
                        Foreground="#888888" FontSize="11"/>
         </StackPanel>
