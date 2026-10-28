@@ -5,6 +5,7 @@ using FotoAI.Desktop.Services;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 
 namespace FotoAI.Desktop.ViewModels
@@ -38,6 +39,79 @@ namespace FotoAI.Desktop.ViewModels
         private bool _isStatusError;
 
         public ObservableCollection<SearchResultModel> SearchResults { get; } = new();
+
+        // Filtro por ano: "Todos" ou um ano com fotos
+        public const string AllYears = "Todos";
+        public ObservableCollection<string> Years { get; } = new() { AllYears };
+
+        [ObservableProperty]
+        private string _yearFrom = AllYears;
+
+        [ObservableProperty]
+        private string _yearTo = AllYears;
+
+        [ObservableProperty]
+        private string _yearFilterHint = "";
+
+        // Para repetir a última pesquisa quando o filtro muda
+        private Func<Task>? _lastSearch;
+        private bool _wasBusy;
+        private bool _reloadingYears;
+
+        private static int? ParseYear(string value) => int.TryParse(value, out var y) ? y : null;
+        private int? FromYear => ParseYear(YearFrom);
+        private int? ToYear => ParseYear(YearTo);
+
+        partial void OnYearFromChanged(string value) => _ = RepeatLastSearchAsync();
+        partial void OnYearToChanged(string value) => _ = RepeatLastSearchAsync();
+        // (o WPF pode pôr null quando a lista de anos é recarregada; ParseYear trata disso)
+
+        private async Task RepeatLastSearchAsync()
+        {
+            if (_lastSearch != null && !IsBusy && !_reloadingYears)
+                await _lastSearch();
+        }
+
+        private async Task RunSearchAsync(Func<Task<SearchResponseModel?>> search)
+        {
+            IsBusy = true;
+            SearchResults.Clear();
+            var response = await search();
+            if (response?.Results != null)
+            {
+                foreach (var result in response.Results)
+                    SearchResults.Add(result);
+            }
+            IsBusy = false;
+        }
+
+        private async Task LoadYearsAsync()
+        {
+            var response = await _engineClient.GetYearsAsync();
+            if (response == null) return;
+            YearFilterHint = response.WithoutDate > 0
+                ? $"Com filtro de ano, as {response.WithoutDate:N0} fotos sem data ficam de fora."
+                : "";
+            var keepFrom = YearFrom;
+            var keepTo = YearTo;
+            var years = response.Years.Select(y => y.Year.ToString()).ToList();
+            if (Years.Skip(1).SequenceEqual(years)) return;
+
+            // Ao limpar a lista as ComboBox largam a seleção; não pode disparar pesquisas
+            _reloadingYears = true;
+            try
+            {
+                Years.Clear();
+                Years.Add(AllYears);
+                foreach (var y in years) Years.Add(y);
+                YearFrom = Years.Contains(keepFrom) ? keepFrom : AllYears;
+                YearTo = Years.Contains(keepTo) ? keepTo : AllYears;
+            }
+            finally
+            {
+                _reloadingYears = false;
+            }
+        }
 
         public MainWindowViewModel(EngineClient engineClient, PythonEngineRunner engineRunner,
                                    ILogger<MainWindowViewModel> logger)
@@ -88,6 +162,7 @@ namespace FotoAI.Desktop.ViewModels
 
                 if (await _engineClient.HealthCheckAsync())
                 {
+                    await LoadYearsAsync();
                     _ = CheckEngineStatusLoopAsync();
                     return;
                 }
@@ -113,20 +188,9 @@ namespace FotoAI.Desktop.ViewModels
         private async Task SearchAsync()
         {
             if (string.IsNullOrWhiteSpace(SearchQuery)) return;
-
-            IsBusy = true;
-            SearchResults.Clear();
-
-            var response = await _engineClient.SearchAsync(SearchQuery);
-            if (response?.Results != null)
-            {
-                foreach (var result in response.Results)
-                {
-                    SearchResults.Add(result);
-                }
-            }
-
-            IsBusy = false;
+            var query = SearchQuery;
+            _lastSearch = () => RunSearchAsync(() => _engineClient.SearchAsync(query, yearFrom: FromYear, yearTo: ToYear));
+            await _lastSearch();
         }
 
         [RelayCommand]
@@ -136,6 +200,9 @@ namespace FotoAI.Desktop.ViewModels
             if (status != null)
             {
                 bool busy = status.Phase is "SCANNING" or "DB_SYNC" or "MODEL" or "INDEXING";
+                // Acabou uma indexação: pode haver anos novos
+                if (_wasBusy && !busy) await LoadYearsAsync();
+                _wasBusy = busy;
                 string text = string.IsNullOrWhiteSpace(status.Message)
                     ? (status.IsRunning ? $"A indexar {status.FilesProcessed}/{status.TotalFilesFound}" : "Pronto")
                     : status.Message;
@@ -223,21 +290,9 @@ namespace FotoAI.Desktop.ViewModels
         private async Task SearchSimilarAsync(int photoId)
         {
             if (photoId <= 0) return;
-
-            IsBusy = true;
             SearchQuery = "Imagens Semelhantes...";
-            SearchResults.Clear();
-
-            var response = await _engineClient.SearchSimilarAsync(photoId);
-            if (response?.Results != null)
-            {
-                foreach (var result in response.Results)
-                {
-                    SearchResults.Add(result);
-                }
-            }
-
-            IsBusy = false;
+            _lastSearch = () => RunSearchAsync(() => _engineClient.SearchSimilarAsync(photoId, yearFrom: FromYear, yearTo: ToYear));
+            await _lastSearch();
         }
 
         [RelayCommand]
@@ -251,20 +306,10 @@ namespace FotoAI.Desktop.ViewModels
 
             if (dialog.ShowDialog() == true)
             {
-                IsBusy = true;
-                SearchQuery = $"Semelhante a: {System.IO.Path.GetFileName(dialog.FileName)}";
-                SearchResults.Clear();
-
-                var response = await _engineClient.SearchByImageAsync(dialog.FileName);
-                if (response?.Results != null)
-                {
-                    foreach (var result in response.Results)
-                    {
-                        SearchResults.Add(result);
-                    }
-                }
-
-                IsBusy = false;
+                var file = dialog.FileName;
+                SearchQuery = $"Semelhante a: {System.IO.Path.GetFileName(file)}";
+                _lastSearch = () => RunSearchAsync(() => _engineClient.SearchByImageAsync(file, yearFrom: FromYear, yearTo: ToYear));
+                await _lastSearch();
             }
         }
 

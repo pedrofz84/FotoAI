@@ -19,8 +19,33 @@ namespace FotoAI.Desktop.Models
         [JsonPropertyName("score")]
         public double Score { get; set; }
 
+        [JsonPropertyName("capture_date")]
+        public string? CaptureDate { get; set; }
+
+        /// <summary>Data à portuguesa (dd/mm/aaaa), ou vazio se a foto não tiver data.</summary>
+        public string CaptureDateText =>
+            System.DateTime.TryParse(CaptureDate, out var d) ? d.ToString("dd/MM/yyyy") : "";
+
         public string ThumbnailUrl => $"http://127.0.0.1:8000/api/photos/{Guid}/thumbnail";
         public string PreviewUrl => $"http://127.0.0.1:8000/api/photos/{Guid}/preview";
+    }
+
+    public class YearCountModel
+    {
+        [JsonPropertyName("year")]
+        public int Year { get; set; }
+
+        [JsonPropertyName("count")]
+        public int Count { get; set; }
+    }
+
+    public class YearsResponseModel
+    {
+        [JsonPropertyName("years")]
+        public YearCountModel[] Years { get; set; } = [];
+
+        [JsonPropertyName("without_date")]
+        public int WithoutDate { get; set; }
     }
 
     public class SearchResponseModel

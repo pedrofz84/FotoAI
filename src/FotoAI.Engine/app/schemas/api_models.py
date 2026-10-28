@@ -31,6 +31,8 @@ class SearchRequest(BaseModel):
     query: str
     top_k: int = 50
     min_score: float = 0.15
+    year_from: Optional[int] = None   # filtros por ano de captura (inclusive)
+    year_to: Optional[int] = None
 
 class SearchResultItem(BaseModel):
     id: int
@@ -38,6 +40,15 @@ class SearchResultItem(BaseModel):
     file_path: str
     score: float
     guid: str
+    capture_date: Optional[str] = None   # AAAA-MM-DD, se conhecida
+
+class YearCount(BaseModel):
+    year: int
+    count: int
+
+class YearsResponse(BaseModel):
+    years: List[YearCount]
+    without_date: int
 
 class SearchResponse(BaseModel):
     results: List[SearchResultItem]

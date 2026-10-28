@@ -162,13 +162,39 @@ def delete_folder(folder_id: int, db: Session = Depends(get_db)):
     logger.info(f"[DELETE] Galeria ID {folder_id} expurgada com Sucesso. Removidos {len(guids_to_del)} registos.")
     return {"message": "Success", "deleted_count": len(guids_to_del)}
 
-from app.schemas.api_models import SearchRequest, SearchResponse, SearchResultItem
+from app.schemas.api_models import SearchRequest, SearchResponse, SearchResultItem, YearsResponse, YearCount
 from app.imaging.ml_pipeline import ml_pipeline
 from app.vector.qdrant_client import vector_store
 from app.db.database import get_db
 from sqlalchemy.orm import Session
 from fastapi import Depends
 import time
+
+def _date_filter(year_from: int | None, year_to: int | None):
+    """ Filtro Qdrant pelo ano de captura. As fotos sem data ficam de fora quando há filtro. """
+    from datetime import datetime, timezone
+    from qdrant_client.models import Filter, FieldCondition, Range
+    if year_from is None and year_to is None:
+        return None
+    if year_from is not None and year_to is not None and year_from > year_to:
+        year_from, year_to = year_to, year_from
+    gte = int(datetime(year_from, 1, 1, tzinfo=timezone.utc).timestamp()) if year_from else None
+    lt = int(datetime(year_to + 1, 1, 1, tzinfo=timezone.utc).timestamp()) if year_to else None
+    return Filter(must=[FieldCondition(key="capture_ts", range=Range(gte=gte, lt=lt))])
+
+@router.get("/years", response_model=YearsResponse)
+def list_years(db: Session = Depends(get_db)):
+    """ Anos com fotos (para os filtros da UI) """
+    from sqlalchemy import func
+    from app.models.domain import PhotoRecord
+    year = func.strftime("%Y", PhotoRecord.capture_time)
+    rows = (db.query(year, func.count()).filter(PhotoRecord.capture_time.isnot(None),
+                                                 PhotoRecord.processing_status == "INDEXED")
+            .group_by(year).order_by(year).all())
+    without = db.query(PhotoRecord).filter(PhotoRecord.capture_time.is_(None),
+                                           PhotoRecord.processing_status == "INDEXED").count()
+    return YearsResponse(years=[YearCount(year=int(y), count=n) for y, n in rows if y],
+                         without_date=without)
 
 def _format_search_results(search_result, db: Session, start_time: float) -> SearchResponse:
     """ Helper para converter hits do Qdrant em objetos SearchResponse do SQLite """
@@ -186,7 +212,8 @@ def _format_search_results(search_result, db: Session, start_time: float) -> Sea
                 file_name=rec.file_name,
                 file_path=rec.file_path,
                 score=hit.score,
-                guid=rec.guid_id
+                guid=rec.guid_id,
+                capture_date=rec.capture_time.strftime("%Y-%m-%d") if rec.capture_time else None
             ))
             
     processing_time = int((time.time() - start_time) * 1000)
@@ -202,13 +229,16 @@ def search_photos(request: SearchRequest, db: Session = Depends(get_db)):
         collection_name=vector_store.COLLECTION_NAME,
         query=query_vector,
         limit=request.top_k,
-        score_threshold=request.min_score
+        score_threshold=request.min_score,
+        query_filter=_date_filter(request.year_from, request.year_to)
     )
     
     return _format_search_results(search_result, db, start_time)
 
 @router.post("/search/image", response_model=SearchResponse)
-async def search_by_image(file: UploadFile = File(...), top_k: int = 50, db: Session = Depends(get_db)):
+async def search_by_image(file: UploadFile = File(...), top_k: int = 50,
+                          year_from: int | None = None, year_to: int | None = None,
+                          db: Session = Depends(get_db)):
     """ Recebe uma imagem externa, gera o embedding e procura fotos semelhantes na base local """
     start_time = time.time()
     
@@ -224,13 +254,15 @@ async def search_by_image(file: UploadFile = File(...), top_k: int = 50, db: Ses
     search_result = vector_store.client.query_points(
         collection_name=vector_store.COLLECTION_NAME,
         query=query_vector,
-        limit=top_k
+        limit=top_k,
+        query_filter=_date_filter(year_from, year_to)
     )
     
     return _format_search_results(search_result, db, start_time)
 
 @router.get("/search/similar/{photo_id}", response_model=SearchResponse)
-def search_similar(photo_id: int, top_k: int = 50, db: Session = Depends(get_db)):
+def search_similar(photo_id: int, top_k: int = 50, year_from: int | None = None,
+                   year_to: int | None = None, db: Session = Depends(get_db)):
     """ Encontra fotos semelhantes a uma já indexada, reutilizando o vetor guardado no Qdrant """
     start_time = time.time()
     from app.models.domain import PhotoRecord
@@ -262,7 +294,8 @@ def search_similar(photo_id: int, top_k: int = 50, db: Session = Depends(get_db)
     search_result = vector_store.client.query_points(
         collection_name=vector_store.COLLECTION_NAME,
         query=query_vector,
-        limit=top_k
+        limit=top_k,
+        query_filter=_date_filter(year_from, year_to)
     )
     
     return _format_search_results(search_result, db, start_time)

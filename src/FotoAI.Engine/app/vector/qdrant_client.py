@@ -125,6 +125,15 @@ class VectorStore:
                                                 on_disk=True),
                     hnsw_config=HnswConfigDiff(on_disk=True),
                 )
+            # Índice para filtrar por data de captura (o modo local ignora índices, e não faz mal)
+            try:
+                from qdrant_client.models import PayloadSchemaType
+                info = self.client.get_collection(self.COLLECTION_NAME)
+                if "capture_ts" not in (info.payload_schema or {}):
+                    self.client.create_payload_index(self.COLLECTION_NAME, field_name="capture_ts",
+                                                     field_schema=PayloadSchemaType.INTEGER)
+            except Exception as e:
+                logger.debug(f"Índice capture_ts não criado: {e}")
             count = self.client.count(self.COLLECTION_NAME, exact=False).count
             logger.info(f"Base vetorial pronta ({self.mode}, ~{count} vetores).")
         except Exception as e:
