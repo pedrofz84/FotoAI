@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+qdrant-client>=1.10
+loguru
+sentence-transformers
+Pillow>=10.1
+rawpy
+pillow-heif
+python-multipart
+# GPU NVIDIA: instala o torch com CUDA ANTES deste ficheiro, por exemplo:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124

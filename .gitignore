@@ -1,5 +1,6 @@
 # Ambientes Virtuais
 venv/
+.venv/
 env/
 .env
 
@@ -10,7 +11,27 @@ __pycache__/
 
 # Bases de Dados e Dados Locais (MUITO IMPORTANTE NÃO PARTILHAR ESTES)
 fotosai.db
+*.db-wal
+*.db-shm
 chroma_data/
+qdrant_storage/
+src/FotoAI.Engine/qdrant/
+
+# Build .NET
+bin/
+obj/
+*.user
+.vs/
+build_*.txt
+
+# Build Python / instalador
+dist/
+build/
+*.spec
+installer/Output/
+
+# Arquivos soltos
+*.zip
 
 # Ficheiros do Sistema e IDE
 .DS_Store

@@ -1,0 +1,1 @@
+﻿Python 3.13.7 (lido de .venv\pyvenv.cfg em 2026-10-26)

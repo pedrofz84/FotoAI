@@ -1,0 +1,52 @@
+<Window x:Class="FotoAI.Desktop.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Sobre o FotoAI" Height="450" Width="400"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#1E1E1E" Foreground="White">
+    <Grid Margin="20">
+        <StackPanel>
+            <TextBlock Text="FotoAI" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+            <TextBlock Text="Versão 2.0.0" FontSize="14" Foreground="#888888" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+            <TextBlock Text="Criado por Pedro Silva · pedro-silva.com" FontSize="12" Foreground="#AAAAAA" HorizontalAlignment="Center" Margin="0,0,0,2"/>
+            <TextBlock Text="github.com/pedrofz84" FontSize="12" Foreground="#007ACC" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+            
+            <TextBlock Text="A Pesquisa Inteligente que Respeita a sua Privacidade" FontWeight="SemiBold" TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,20"/>
+            
+            <TabControl Background="Transparent" BorderThickness="0">
+                <TabItem Header="Sobre">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+                        <TextBlock TextWrapping="Wrap" LineHeight="20">
+                            O FotoAI é um gestor de fotografias de nova geração que utiliza Inteligência Artificial local para permitir pesquisas semânticas. 
+                            <LineBreak/><LineBreak/>
+                            Ao contrário de outros serviços, o FotoAI corre 100% no seu computador. Nenhuma imagem ou metadado é enviado para a nuvem.
+                            <LineBreak/><LineBreak/>
+                            Tecnologias utilizadas:
+                            • OpenAI CLIP (ViT-B-32)
+                            • Qdrant Vector Database
+                            • Python Engine (Backend)
+                            • .NET 8 / WPF (Frontend)
+                        </TextBlock>
+                    </ScrollViewer>
+                </TabItem>
+                <TabItem Header="FAQ">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Como funciona a pesquisa?" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <TextBlock Text="A IA analisa o conteúdo visual e converte-o em vetores matemáticos. Quando pesquisa por 'pôr do sol', o sistema procura as fotos cujos vetores são mais semelhantes ao conceito." TextWrapping="Wrap" Margin="0,0,0,15"/>
+
+                            <TextBlock Text="É seguro para a minha privacidade?" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <TextBlock Text="Sim. Todo o processamento ocorre localmente. Não é necessária ligação à Internet para indexar ou pesquisar." TextWrapping="Wrap" Margin="0,0,0,15"/>
+
+                            <TextBlock Text="Onde ficam guardados os dados?" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <TextBlock Text="Os dados de indexação e miniaturas ficam em: %LOCALAPPDATA%\FotoAI" TextWrapping="Wrap" Margin="0,0,0,15"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
+            
+            <Button Content="Fechar" Click="CloseButton_Click" HorizontalAlignment="Center" Margin="0,20,0,0" Padding="20,5" Cursor="Hand" Background="#333333" Foreground="White" BorderThickness="0"/>
+        </StackPanel>
+    </Grid>
+</Window>
