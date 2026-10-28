@@ -44,6 +44,37 @@ namespace FotoAI.Desktop.Services
             }
         }
 
+        /// <summary>
+        /// Importa (ou volta a sincronizar) um catálogo do Lightroom. Devolve null se correu bem,
+        /// ou a mensagem de erro do motor (ex.: Lightroom aberto).
+        /// </summary>
+        public async Task<string?> ImportLightroomAsync(string catalogPath)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"api/lightroom/import?catalog_path={Uri.EscapeDataString(catalogPath)}", null);
+                if (response.IsSuccessStatusCode) return null;
+                try
+                {
+                    var body = await response.Content.ReadFromJsonAsync<EngineMessage>();
+                    if (!string.IsNullOrWhiteSpace(body?.Message)) return body!.Message;
+                }
+                catch { }
+                return $"O motor recusou o pedido ({(int)response.StatusCode}).";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Falha ao pedir a importação do Lightroom.");
+                return "O motor de IA não respondeu.";
+            }
+        }
+
+        private class EngineMessage
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("message")]
+            public string? Message { get; set; }
+        }
+
         public async Task<FolderListResponse?> GetFoldersAsync()
         {
             try

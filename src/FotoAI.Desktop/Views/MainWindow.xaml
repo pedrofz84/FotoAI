@@ -21,6 +21,8 @@
         <!-- Menu Bar -->
         <Menu Grid.Row="0" Background="Transparent" Foreground="White" Margin="-10,-10,-10,10">
             <MenuItem Header="Ficheiro">
+                <MenuItem Header="Indexar Pasta..." Command="{Binding IndexFolderCommand}"/>
+                <MenuItem Header="Importar catálogo Lightroom..." Command="{Binding ImportLightroomCommand}"/>
                 <MenuItem Header="Gerir Pastas..." Command="{Binding ManageFoldersCommand}"/>
                 <Separator />
                 <MenuItem Header="Sair" Click="MenuItemExit_Click"/>
@@ -63,7 +65,11 @@
                     Margin="10,0,0,0" Width="130" Height="35" Cursor="Hand" 
                     Background="#007ACC" Foreground="White" BorderThickness="0"/>
                     
-            <Button Grid.Column="4" Content="Gerir Pastas 🗑️" Command="{Binding ManageFoldersCommand}" 
+            <Button Grid.Column="4" Content="Lightroom..." Command="{Binding ImportLightroomCommand}" 
+                    Margin="10,0,0,0" Width="100" Height="35" Cursor="Hand" ToolTip="Importar um catálogo do Lightroom Classic (.lrcat)"
+                    Background="#31A8FF" Foreground="White" BorderThickness="0"/>
+
+            <Button Grid.Column="5" Content="Gerir Pastas 🗑️" Command="{Binding ManageFoldersCommand}" 
                     Margin="10,0,0,0" Width="130" Height="35" Cursor="Hand" 
                     Background="#444444" Foreground="White" BorderThickness="0"/>
         </Grid>

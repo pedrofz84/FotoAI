@@ -22,6 +22,7 @@ class FolderResponseItem(BaseModel):
     last_scanned: str
     scan_status: str
     image_count: int
+    source_type: str = "FOLDER"     # FOLDER ou LIGHTROOM
 
 class FolderListResponse(BaseModel):
     folders: List[FolderResponseItem]

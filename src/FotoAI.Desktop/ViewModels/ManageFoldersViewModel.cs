@@ -37,6 +37,25 @@ namespace FotoAI.Desktop.ViewModels
         }
 
         [RelayCommand]
+        private async Task SyncFolderAsync(FolderResponseItem? folder)
+        {
+            if (folder == null) return;
+            IsBusy = true;
+            string? error = folder.IsLightroom
+                ? await _engineClient.ImportLightroomAsync(folder.FolderPath)
+                : (await _engineClient.IndexFolderAsync(folder.FolderPath) ? null
+                   : "Não foi possível iniciar: já há uma indexação a decorrer, ou o motor não respondeu.");
+            IsBusy = false;
+
+            if (error == null)
+                System.Windows.MessageBox.Show("Sincronização iniciada. O progresso aparece no rodapé da janela principal.",
+                    "Sincronizar", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            else
+                System.Windows.MessageBox.Show(error, "Sincronizar", System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+        }
+
+        [RelayCommand]
         private async Task DeleteFolderAsync(FolderResponseItem? folder)
         {
             if (folder == null) return;

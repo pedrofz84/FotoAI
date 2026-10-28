@@ -31,9 +31,14 @@ def _absorb(db: Session, parent: IndexedFolder, child: IndexedFolder) -> int:
     return moved
 
 
+def _folder_libraries(db: Session) -> list[IndexedFolder]:
+    """Só as bibliotecas de pastas; os catálogos Lightroom ficam de fora destas regras."""
+    return [f for f in db.query(IndexedFolder).all() if (f.source_type or "FOLDER") == "FOLDER"]
+
+
 def consolidate_folders(db: Session) -> None:
     """Junta bibliotecas que estão dentro de outras (corre no arranque)."""
-    folders = db.query(IndexedFolder).all()
+    folders = _folder_libraries(db)
     changed = False
     for child in folders:
         parent = next((f for f in folders if f is not child and is_inside(child.folder_path, f.folder_path)), None)
@@ -49,7 +54,7 @@ def resolve_index_target(db: Session, folder_path: str) -> tuple[IndexedFolder, 
     Devolve (biblioteca, pasta_a_percorrer).
     A pasta a percorrer pode ser uma subpasta da biblioteca (sync parcial).
     """
-    folders = db.query(IndexedFolder).all()
+    folders = _folder_libraries(db)
 
     same = next((f for f in folders if norm(f.folder_path) == norm(folder_path)), None)
     if same:
@@ -68,3 +73,18 @@ def resolve_index_target(db: Session, folder_path: str) -> tuple[IndexedFolder, 
     db.commit()
     db.refresh(lib)
     return lib, folder_path
+
+
+def resolve_lightroom_library(db: Session, catalog_path: str) -> IndexedFolder:
+    """Devolve a biblioteca deste catálogo, criando-a na primeira importação."""
+    for f in db.query(IndexedFolder).all():
+        if norm(f.folder_path) == norm(catalog_path):
+            if f.source_type != "LIGHTROOM":
+                f.source_type = "LIGHTROOM"
+                db.commit()
+            return f
+    lib = IndexedFolder(folder_path=catalog_path, source_type="LIGHTROOM")
+    db.add(lib)
+    db.commit()
+    db.refresh(lib)
+    return lib

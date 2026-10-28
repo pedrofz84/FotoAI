@@ -21,6 +21,32 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+def ensure_columns():
+    """
+    O create_all só cria tabelas novas; não acrescenta colunas a tabelas que já existem.
+    Aqui acrescentam-se as colunas novas às bases criadas por versões anteriores.
+    """
+    from sqlalchemy import inspect, text
+    insp = inspect(engine)
+    with engine.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            if not insp.has_table(table.name):
+                continue
+            existing = {c["name"] for c in insp.get_columns(table.name)}
+            for col in table.columns:
+                if col.name in existing:
+                    continue
+                coltype = col.type.compile(engine.dialect)
+                default = ""
+                if col.default is not None and getattr(col.default, "is_scalar", False):
+                    val = col.default.arg
+                    default = f" DEFAULT '{val}'" if isinstance(val, str) else f" DEFAULT {val}"
+                conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {coltype}{default}'))
+            for idx in table.indexes:
+                conn.execute(text(
+                    f'CREATE INDEX IF NOT EXISTS "{idx.name}" ON "{table.name}" '
+                    f'({", ".join(c.name for c in idx.columns)})'))
+
 def get_db():
     db = SessionLocal()
     try:

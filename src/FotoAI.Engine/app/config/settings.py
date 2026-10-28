@@ -38,6 +38,12 @@ class Settings:
     # Previews HD só são geradas quando a UI as pede (evita dezenas de GB de cache)
     PREVIEW_ON_DEMAND = True
 
+    # Catálogo Lightroom: que nível da pirâmide de pré-visualizações usar
+    LR_CLIP_MIN_SIDE = _env_int("FOTOAI_LR_CLIP_MIN_SIDE", 448)   # o mais pequeno com pelo menos isto
+    LR_HD_MIN_SIDE = _env_int("FOTOAI_LR_HD_MIN_SIDE", 1920)      # para a vista HD
+    # 1 = rodar as pré-visualizações segundo a orientação do catálogo (se aparecerem deitadas)
+    LR_APPLY_ORIENTATION = os.getenv("FOTOAI_LR_APPLY_ORIENTATION", "0") == "1"
+
     @staticmethod
     def is_network_path(path: str) -> bool:
         """UNC (\\\\servidor\\partilha) ou unidade de rede mapeada (ex: Z:)."""

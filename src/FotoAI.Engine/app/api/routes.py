@@ -28,7 +28,11 @@ def start_indexing(folder_path: str):
     from app.services.folder_service import resolve_index_target
 
     if job_manager.state not in ("IDLE", "FAILED"):
-        return JSONResponse(status_code=409, content={"message": "A job is already running"})
+        return JSONResponse(status_code=409, content={"message": "Já há uma indexação a decorrer."})
+
+    # Um catálogo .lrcat (importação nova ou nova sincronização a partir de "Gerir Pastas")
+    if folder_path.lower().endswith(".lrcat"):
+        return import_lightroom(folder_path)
 
     with SessionLocal() as db:
         # Trata pastas dentro de outras já indexadas (e vice-versa)
@@ -41,6 +45,29 @@ def start_indexing(folder_path: str):
         logger.info(f"Index job accepted for {scan_path} (biblioteca ID {lib_id}: {lib_root})")
         return {"message": "Job Accepted", "library_id": lib_id, "library_root": lib_root}
     return JSONResponse(status_code=409, content={"message": "A job is already running"})
+
+@router.post("/lightroom/import")
+def import_lightroom(catalog_path: str):
+    """ Importa (ou volta a sincronizar) um catálogo do Lightroom Classic, só em leitura """
+    from app.db.database import SessionLocal
+    from app.services.folder_service import resolve_lightroom_library
+    from app.services.lightroom_service import validate_catalog, LightroomError
+
+    if job_manager.state not in ("IDLE", "FAILED"):
+        return JSONResponse(status_code=409, content={"message": "Já há uma indexação a decorrer."})
+    try:
+        validate_catalog(catalog_path)
+    except LightroomError as e:
+        return JSONResponse(status_code=400, content={"message": str(e)})
+
+    with SessionLocal() as db:
+        lib = resolve_lightroom_library(db, catalog_path)
+        lib_id, lib_path = lib.id, lib.folder_path
+
+    if job_manager.trigger_lightroom_indexing(lib_id, lib_path):
+        logger.info(f"Importação do Lightroom aceite: {lib_path} (biblioteca ID {lib_id})")
+        return {"message": "Job Accepted", "library_id": lib_id, "library_root": lib_path}
+    return JSONResponse(status_code=409, content={"message": "Já há uma indexação a decorrer."})
 
 @router.get("/photos/{guid_id}/thumbnail")
 def get_thumbnail(guid_id: str):
@@ -62,9 +89,13 @@ def get_preview(guid_id: str):
     if not preview_path.exists():
         with SessionLocal() as db:
             rec = db.query(PhotoRecord).filter(PhotoRecord.guid_id == guid_id).first()
-        if not rec or not os.path.exists(rec.file_path):
+        if not rec:
+            return JSONResponse(status_code=404, content={"message": "Foto não encontrada"})
+        # Fotos do Lightroom: a pré-visualização grande já tem as edições e evita abrir o RAW
+        source = rec.hd_path if rec.hd_path and os.path.exists(rec.hd_path) else rec.file_path
+        if not os.path.exists(source):
             return JSONResponse(status_code=404, content={"message": "Foto original inacessível"})
-        preview_path = ensure_preview(rec.file_path, guid_id)
+        preview_path = ensure_preview(source, guid_id)
     if preview_path and preview_path.exists():
         return FileResponse(preview_path, media_type="image/webp")
     return JSONResponse(status_code=404, content={"message": "Preview não existe"})
@@ -93,7 +124,8 @@ def get_folders(db: Session = Depends(get_db)):
             folder_path=f.folder_path,
             last_scanned=f.last_scanned.isoformat() if f.last_scanned else "",
             scan_status=f.scan_status,
-            image_count=count
+            image_count=count,
+            source_type=f.source_type or "FOLDER"
         ))
     return FolderListResponse(folders=res)
 
@@ -218,8 +250,9 @@ def search_similar(photo_id: int, top_k: int = 50, db: Session = Depends(get_db)
     if not points or not points[0].vector:
         logger.warning(f"Vetor não encontrado para GUID {photo.guid_id}. A forçar re-indexação local para pesquisa.")
         # Fallback: Se o vetor sumiu do Qdrant mas o ficheiro existe, re-gera o vetor
-        if os.path.exists(photo.file_path):
-            query_vector = ml_pipeline.encode_image(photo.file_path)
+        source = photo.load_path if photo.load_path and os.path.exists(photo.load_path) else photo.file_path
+        if os.path.exists(source):
+            query_vector = ml_pipeline.encode_image(source)
         else:
             raise HTTPException(status_code=404, detail="Vetor e ficheiro original inacessíveis")
     else:

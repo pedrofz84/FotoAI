@@ -19,6 +19,15 @@ namespace FotoAI.Desktop.Models
 
         [JsonPropertyName("image_count")]
         public int ImageCount { get; set; }
+
+        [JsonPropertyName("source_type")]
+        public string SourceType { get; set; } = "FOLDER";
+
+        [JsonIgnore]
+        public bool IsLightroom => SourceType == "LIGHTROOM";
+
+        [JsonIgnore]
+        public string TypeLabel => IsLightroom ? "Catálogo Lightroom" : "Pasta";
     }
 
     public class FolderListResponse

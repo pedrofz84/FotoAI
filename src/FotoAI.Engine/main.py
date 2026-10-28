@@ -7,12 +7,13 @@ from loguru import logger
 setup_logging()
 
 # 2. Transações de Esqueleto (SQLite DDL e Qdrant Collection)
-from app.db.database import Base, engine
+from app.db.database import Base, engine, ensure_columns
 import app.models.domain  # noqa: F401  (regista as tabelas no Base antes do create_all)
 from app.vector.qdrant_client import vector_store
 
 logger.info("Bootstrapping: A avaliar Modelo Relacional de Dados SQLite...")
 Base.metadata.create_all(bind=engine) # Migração Automática SQLAlchemy
+ensure_columns()                      # colunas novas em bases de versões anteriores
 
 logger.info("Bootstrapping: A despertar Base Vetorial...")
 vector_store.initialize()

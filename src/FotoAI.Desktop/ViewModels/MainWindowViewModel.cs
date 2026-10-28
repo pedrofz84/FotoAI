@@ -177,6 +177,26 @@ namespace FotoAI.Desktop.ViewModels
         }
 
         [RelayCommand]
+        private async Task ImportLightroomAsync()
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Escolha o catálogo do Lightroom (feche o Lightroom antes)",
+                Filter = "Catálogo Lightroom|*.lrcat"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                SetStatus($"A pedir a importação de {System.IO.Path.GetFileName(dialog.FileName)}...", busy: true);
+                var error = await _engineClient.ImportLightroomAsync(dialog.FileName);
+                if (error == null)
+                    await CheckEngineStatusAsync();
+                else
+                    SetStatus(error, error: true);
+            }
+        }
+
+        [RelayCommand]
         private void OpenImage(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath) || !System.IO.File.Exists(filePath)) return;
